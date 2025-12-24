@@ -1,5 +1,3 @@
-
-
 #include<iostream>
 #include<vector>
 #include<cmath>
@@ -7,8 +5,6 @@
 #include<functional>
 
 using namespace std;
-
-class System;
 
 const double g = 9.8;
 const double G = 6.6743e-11;
@@ -38,7 +34,7 @@ long double getAirDensity(long double altitude) {
 	return 0;
 }
 
-double angleSpreadsheet[94] = {0, 0, 15, 5.55, 25, 22.49, 50, 33.67, 75, 48.08, 100, 53.98, 125, 57.82, 150, 60.23, 200, 65.56, 300, 66.65, 400, 72.3, 550, 89.9, 1e12, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1e12, 90};
+double angleSpreadsheet[26] = {0, 0, 15, 5.55, 25, 22.49, 50, 33.67, 75, 48.08, 100, 53.98, 125, 57.82, 150, 60.23, 200, 65.56, 300, 66.65, 400, 72.3, 550, 95, 1e12, 90};
 
 long double getAngle(long double time) {
 	int len = sizeof(angleSpreadsheet) / sizeof(*angleSpreadsheet);
@@ -54,7 +50,7 @@ long double getAngle(long double time) {
 	return 0;
 }
 
-double throttlingSpreadsheet[50] = {0, .975, 25, .975, 25.5, 1, 53, 1, 53.1, .8, 59.9, .8, 60, .9, 59, .9, 109, .9, 110, .94, 134, .94, 147.5, .8, 150, 0, 158, 0, 164, .985, 490, .985, 521.5, .737, 525, 0, 3000, 0, 3000.1, 1, 3001.4, 1, 3001.5, 0, 3600, 0, 3601, 1, 999999999, 0};
+double throttlingSpreadsheet[52] = {0, .975, 25, .975, 25.5, 1, 53, 1, 53.1, .8, 59.9, .8, 60, .9, 59, .9, 109, .9, 110, .94, 134, .94, 147.5, .8, 150, 0, 158, 0, 164, .985, 488, .985, 521.5, .737, 523, 0, 2000, 0, 2000.1, 1, 2001, 1, 2001.9, 0, 3600, 0, 3601, 1, 1e13, 1, 1e14, 0};
 
 double getThrottling(long double time) {
 	int len = sizeof(throttlingSpreadsheet) / sizeof(*throttlingSpreadsheet);
@@ -159,8 +155,12 @@ class Vec2 {
 		return Vec2(0., 0.);
 	}
 
-	static long double distance(Vec2 a, Vec2 b) {
+	static double distance(Vec2 a, Vec2 b) {
 		return (a - b).length();
+	}
+	
+	static double dot(Vec2 a, Vec2 b) {
+		return a.x * b.x + a.y * b.y;
 	}
 };
 
@@ -172,7 +172,7 @@ struct CosmicBody {
 	function<double(double altitude)> getAirDensity;
 };
 
-CosmicBody Earth{5.9726 * pow(10, 24), 6'378'000, Vec2(0, -6'378'000), getAirDensity};
+CosmicBody Earth{5.972365261370795e+24, 6'378'000, Vec2(0, -6'378'000), getAirDensity};
 
 double getEarthRotationSpeedAtPoint(Vec2 pointPosition, double latitude = 0) {
 	return (Earth.position - pointPosition).length() * 2 * PI * cos(latitude) / (24 * 60 * 60);
@@ -240,7 +240,7 @@ class Rocket {
 		Vec2 position = Vec2::zero();
 		Vec2 speed = Vec2::zero();
 		double diameter = 5;
-		double cd = .33;
+		double cd = .29;
 		double throttling = 1;
 		double angle = 0;
 		double area;
@@ -248,6 +248,7 @@ class Rocket {
 		long double timer = 0;
 		unsigned int currentStage = 1;
 		unsigned int state = 1;
+		double latitude = 28.5;
 
 		double bufferedValues[4] = {0, 0, 0, 0};
 
@@ -258,7 +259,7 @@ class Rocket {
 			stages.push_back(new RocketStage(26'300, 409'500, 0, Merlin1D, 9, pow(5. / 2, 2) * PI));
 			area = pow(5. / 2, 2) * PI;
 			position += Vec2(0, altitude);
-			speed += Vec2(getEarthRotationSpeedAtPoint(position, PI * 28.5 / 180), 0);
+			speed += Vec2(getEarthRotationSpeedAtPoint(position, PI * latitude / 180), 0);
 		}
 
 		~Rocket() {
@@ -373,12 +374,12 @@ void Rocket::update(double deltaTime) {
 
 	Vec2 EarthDir = (Earth.position - position).normalized();
 	Vec2 gravityForce = EarthDir * G * getMass() * Earth.mass / pow(Vec2::distance(Earth.position, position), 2);
-	Vec2 localSpeed = (speed - EarthDir.rotated(PI / 2) * getEarthRotationSpeedAtPoint(position, PI * 28.5 / 180));
+	Vec2 localSpeed = (speed - EarthDir.rotated(PI / 2) * getEarthRotationSpeedAtPoint(position, PI * latitude / 180));
 	Vec2 dragForce = localSpeed.normalized().negative() * airDensity * pow(localSpeed.length(), 2) * cd * area / 2;
-
+	
 	bufferedValues[0] = dragForce.length();
 	bufferedValues[1] = throttling * (stages.empty() || stages.back()->fuelMass <= 0 ? 0 : stages.back()->getThrust(airDensity));
-	
+
 	speed += ((EarthDir.negative() * throttling * (stages.empty() || stages.back()->fuelMass <= 0 ? 0 : stages.back()->getThrust(airDensity))).rotated(-angle * PI / 180) + gravityForce + dragForce) * deltaTime / getMass();
 	position += speed * deltaTime;
 	altitude = Vec2::distance(position, Earth.position) - Earth.radius;
