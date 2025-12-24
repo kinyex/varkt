@@ -60,12 +60,10 @@ data['aerodynamic_force_z'] = []
 
 vessel.control.activate_next_stage()
 
-latitude = 61.5 # 118.5
+latitude = 61.5
 
 vessel.auto_pilot.engage()
 vessel.auto_pilot.target_pitch_and_heading(90, latitude)
-#time.sleep(.01)
-#vessel.control.activate_next_stage()
 
 resources = vessel.resources_in_decouple_stage(vessel.control.current_stage, cumulative=False)
 
@@ -76,7 +74,6 @@ print(f'Planet mass: {body.mass}')
 stage = 1
 
 while met() < 5000: # and met() < 3600 / 3.39:
-	#tm = max(0, met() - 4.31)
 	tm = met() * 3.39
 	if vessel.thrust == 0 and False:
 		vessel.control.activate_next_stage()
@@ -94,7 +91,6 @@ while met() < 5000: # and met() < 3600 / 3.39:
 		stage = 2
 	elif stage == 2 and tm > 3500:
 		stage += 1
-		# vessel.control.activate_next_stage()
 	elif stage == 3 and streams['altitude']() >= 100_000:
 		stage += 1
 
